@@ -1,0 +1,31 @@
+Metrics/LineLength:
+  Max: 100
+Style/BlockDelimiters:
+  EnforcedStyle: semantic
+Style/ClassAndModuleChildren:
+  # We need nested style for logic require files, but use compact style for logic implementations.
+  Enabled: False
+Style/Documentation:
+  Enabled: False
+Style/GuardClause:
+  # With 1, this catches a few false positives (e.g. a check at the end of a function that raises an
+  # exception)
+  MinBodyLength: 2
+Style/IfUnlessModifier:
+  Enabled: False
+Style/NonNilCheck:
+  Enabled: False
+Style/NumericLiterals:
+  # Make sample division public ids (with 5 digits) usable without underscores.
+  MinDigits: 6
+Style/PreferredHashMethods:
+  # While only using a single method when aliases are available, `has_key?` is a much more obvious
+  # and faster to understand method name than `key?`.
+  Enabled: False
+Style/RaiseArgs:
+  # We regularly use exceptions without an additional message within logic
+  Enabled: False
+Style/RedundantReturn:
+  # Using 'return' to explicitly show that the result of a function call is supposed to be returned
+  # compared to the function just being executed totally makes sense.
+  Enabled: False
