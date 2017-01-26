@@ -1,3 +1,8 @@
+PATH
+  remote: .
+  specs:
+    gcra (1.0.0)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -21,7 +26,8 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  redis (~> 3.2)
+  gcra!
+  redis (~> 3.3)
   rspec (~> 3.5)
 
 BUNDLED WITH
