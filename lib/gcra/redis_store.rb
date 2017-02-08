@@ -45,7 +45,6 @@ module GCRA
 
       if did_set && ttl_nano > 0
         ttl_milli = ttl_nano / 1_000_000
-        puts "TTL: #{ttl_milli}"
         @redis.pexpire(full_key, ttl_milli)
       end
 
