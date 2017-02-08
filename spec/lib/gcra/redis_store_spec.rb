@@ -60,7 +60,9 @@ RSpec.describe GCRA::RedisStore do
     end
 
     it 'with no existing key, returns true' do
-      did_set = store.set_if_not_exists_with_ttl('foo', 3_000_000_000_000_000_000, 10)
+      did_set = store.set_if_not_exists_with_ttl(
+        'foo', 3_000_000_000_000_000_000, 10 * 1_000_000_000
+      )
 
       expect(did_set).to eq(true)
       expect(redis.ttl('gcra-ruby-specs:foo')).to be > 8
@@ -71,7 +73,7 @@ RSpec.describe GCRA::RedisStore do
   describe '#compare_and_set_with_ttl' do
     it 'with no existing key, returns false' do
       swapped = store.compare_and_set_with_ttl(
-        'foo', 2_000_000_000_000_000_000, 3_000_000_000_000_000_000, 1
+        'foo', 2_000_000_000_000_000_000, 3_000_000_000_000_000_000, 1 * 1_000_000_000
       )
 
       expect(swapped).to eq(false)
@@ -82,7 +84,7 @@ RSpec.describe GCRA::RedisStore do
       redis.set('gcra-ruby-specs:foo', 1_485_422_362_766_819_000)
 
       swapped = store.compare_and_set_with_ttl(
-        'foo', 2_000_000_000_000_000_000, 3_000_000_000_000_000_000, 10
+        'foo', 2_000_000_000_000_000_000, 3_000_000_000_000_000_000, 10 * 1_000_000_000
       )
 
       expect(swapped).to eq(false)
@@ -93,7 +95,7 @@ RSpec.describe GCRA::RedisStore do
       redis.set('gcra-ruby-specs:foo', 2_000_000_000_000_000_000)
 
       swapped = store.compare_and_set_with_ttl(
-        'foo', 2_000_000_000_000_000_000, 3_000_000_000_000_000_000, 10
+        'foo', 2_000_000_000_000_000_000, 3_000_000_000_000_000_000, 10 * 1_000_000_000
       )
 
       expect(swapped).to eq(true)

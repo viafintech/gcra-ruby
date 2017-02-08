@@ -1,4 +1,5 @@
 module GCRA
+  # Redis store, expects all timestamps and durations to be integers with nanoseconds since epoch.
   class RedisStore
     CAS_SCRIPT = <<-EOF.freeze
   local v = redis.call('get', KEYS[1])
@@ -9,7 +10,7 @@ module GCRA
     return 0
   end
   if ARGV[3] ~= "0" then
-    redis.call('setex', KEYS[1], ARGV[3], ARGV[2])
+    redis.call('psetex', KEYS[1], ARGV[3], ARGV[2])
   else
     redis.call('set', KEYS[1], ARGV[2])
   end
@@ -38,12 +39,14 @@ module GCRA
 
     # Set the value of key only if it is not already set. Return whether the value was set.
     # Also set the key's expiration (ttl, in seconds). The operations are not performed atomically.
-    def set_if_not_exists_with_ttl(key, value, ttl)
+    def set_if_not_exists_with_ttl(key, value, ttl_nano)
       full_key = @key_prefix + key
       did_set = @redis.setnx(full_key, value)
 
-      if did_set && ttl > 0
-        @redis.expire(full_key, ttl)
+      if did_set && ttl_nano > 0
+        ttl_milli = ttl_nano / 1_000_000
+        puts "TTL: #{ttl_milli}"
+        @redis.pexpire(full_key, ttl_milli)
       end
 
       return did_set
@@ -52,10 +55,11 @@ module GCRA
     # Atomically compare the value at key to the old value. If it matches, set it to the new value
     # and return true. Otherwise, return false. If the key does not exist in the store,
     # return false with no error. If the swap succeeds, update the ttl for the key atomically.
-    def compare_and_set_with_ttl(key, old_value, new_value, ttl)
+    def compare_and_set_with_ttl(key, old_value, new_value, ttl_nano)
       full_key = @key_prefix + key
       begin
-        swapped = @redis.eval(CAS_SCRIPT, keys: [full_key], argv: [old_value, new_value, ttl])
+        ttl_milli = ttl_nano / 1_000_000
+        swapped = @redis.eval(CAS_SCRIPT, keys: [full_key], argv: [old_value, new_value, ttl_milli])
       rescue Redis::CommandError => e
         if e.message == CAS_SCRIPT_MISSING_KEY_RESPONSE
           return false
