@@ -68,6 +68,15 @@ RSpec.describe GCRA::RedisStore do
       expect(redis.ttl('gcra-ruby-specs:foo')).to be > 8
       expect(redis.ttl('gcra-ruby-specs:foo')).to be <= 10
     end
+
+    it 'with a very low ttl (less than 1ms)' do
+      did_set = store.set_if_not_exists_with_ttl(
+        'foo', 3_000_000_000_000_000_000, 100
+      )
+
+      expect(did_set).to eq(true)
+      expect(redis.ttl('gcra-ruby-specs:foo')).to be <= 1
+    end
   end
 
   describe '#compare_and_set_with_ttl' do
@@ -91,7 +100,7 @@ RSpec.describe GCRA::RedisStore do
       expect(redis.get('gcra-ruby-specs:foo')).to eq('1485422362766819000')
     end
 
-    it 'with an existing key and matching old value, returns false' do
+    it 'with an existing key and matching old value, returns true' do
       redis.set('gcra-ruby-specs:foo', 2_000_000_000_000_000_000)
 
       swapped = store.compare_and_set_with_ttl(
@@ -102,6 +111,17 @@ RSpec.describe GCRA::RedisStore do
       expect(redis.get('gcra-ruby-specs:foo')).to eq('3000000000000000000')
       expect(redis.ttl('gcra-ruby-specs:foo')).to be > 8
       expect(redis.ttl('gcra-ruby-specs:foo')).to be <= 10
+    end
+
+    it 'with an existing key and a very low ttl (less than 1ms)' do
+      redis.set('gcra-ruby-specs:foo', 2_000_000_000_000_000_000)
+
+      swapped = store.compare_and_set_with_ttl(
+        'foo', 2_000_000_000_000_000_000, 3_000_000_000_000_000_000, 100
+      )
+
+      expect(swapped).to eq(true)
+      expect(redis.ttl('gcra-ruby-specs:foo')).to be <= 1
     end
   end
 
