@@ -9,11 +9,7 @@ module GCRA
   if v ~= ARGV[1] then
     return 0
   end
-  if ARGV[3] ~= "0" then
-    redis.call('psetex', KEYS[1], ARGV[3], ARGV[2])
-  else
-    redis.call('set', KEYS[1], ARGV[2])
-  end
+  redis.call('psetex', KEYS[1], ARGV[3], ARGV[2])
   return 1
   EOF
     CAS_SCRIPT_MISSING_KEY_RESPONSE = 'key does not exist'.freeze
@@ -43,8 +39,8 @@ module GCRA
       full_key = @key_prefix + key
       did_set = @redis.setnx(full_key, value)
 
-      if did_set && ttl_nano > 0
-        ttl_milli = ttl_nano / 1_000_000
+      if did_set
+        ttl_milli = calculate_ttl_milli(ttl_nano)
         @redis.pexpire(full_key, ttl_milli)
       end
 
@@ -57,7 +53,7 @@ module GCRA
     def compare_and_set_with_ttl(key, old_value, new_value, ttl_nano)
       full_key = @key_prefix + key
       begin
-        ttl_milli = ttl_nano / 1_000_000
+        ttl_milli = calculate_ttl_milli(ttl_nano)
         swapped = @redis.eval(CAS_SCRIPT, keys: [full_key], argv: [old_value, new_value, ttl_milli])
       rescue Redis::CommandError => e
         if e.message == CAS_SCRIPT_MISSING_KEY_RESPONSE
@@ -67,6 +63,18 @@ module GCRA
       end
 
       return swapped == 1
+    end
+
+    private
+
+    def calculate_ttl_milli(ttl_nano)
+      ttl_milli = ttl_nano / 1_000_000
+      # Setting 0 as expiration/ttl would result in an error.
+      # Therefore overwrite it and use 1
+      if ttl_milli == 0
+        return 1
+      end
+      return ttl_milli
     end
   end
 end
