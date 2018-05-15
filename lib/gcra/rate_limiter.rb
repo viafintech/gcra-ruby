@@ -23,6 +23,7 @@ module GCRA
     end
 
     def limit(key, quantity)
+      key = key.to_s unless key.is_a?(String)
       i = 0
 
       while i < MAX_ATTEMPTS
