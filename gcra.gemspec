@@ -5,12 +5,12 @@ require 'gcra/version'
 Gem::Specification.new do |spec|
   spec.name          = 'gcra'
   spec.version       = GCRA::VERSION
-  spec.authors       = ['Michael Frister']
-  spec.email         = ['michael.frister@barzahlen.de']
+  spec.authors       = ['Michael Frister', 'Tobias Schoknecht']
+  spec.email         = ['tobias.schoknecht@barzahlen.de']
   spec.description   = 'GCRA implementation for rate limiting'
   spec.summary       = 'Ruby implementation of a generic cell rate algorithm (GCRA), ported from ' \
                        'the Go implementation throttled.'
-  spec.homepage      = 'https://github.com/Barzahlen/gcra'
+  spec.homepage      = 'https://github.com/Barzahlen/gcra-ruby'
   spec.license       = 'MIT'
 
   spec.files         = Dir['lib/**/*.rb']
