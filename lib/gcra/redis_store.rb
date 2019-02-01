@@ -23,10 +23,12 @@ module GCRA
     # Returns the value of the key or nil, if it isn't in the store.
     # Also returns the time from the Redis server, with microsecond precision.
     def get_with_time(key)
-      time_response = @redis.time # returns tuple (seconds since epoch, microseconds)
+      time_response, value = @redis.pipelined do
+        @redis.time # returns tuple (seconds since epoch, microseconds)
+        @redis.get(@key_prefix + key)
+      end
       # Convert tuple to nanoseconds
       time = (time_response[0] * 1_000_000 + time_response[1]) * 1_000
-      value = @redis.get(@key_prefix + key)
       if value != nil
         value = value.to_i
       end
