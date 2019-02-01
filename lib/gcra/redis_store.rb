@@ -1,3 +1,5 @@
+require 'digest/sha1'
+
 module GCRA
   # Redis store, expects all timestamps and durations to be integers with nanoseconds since epoch.
   class RedisStore
@@ -18,6 +20,7 @@ module GCRA
     def initialize(redis, key_prefix)
       @redis = redis
       @key_prefix = key_prefix
+      @cas_sha = Digest::SHA1.hexdigest(CAS_SCRIPT)
     end
 
     # Returns the value of the key or nil, if it isn't in the store.
@@ -52,13 +55,12 @@ module GCRA
       retried = false
       begin
         ttl_milli = calculate_ttl_milli(ttl_nano)
-        swapped = @redis.evalsha(cas_sha, keys: [full_key], argv: [old_value, new_value, ttl_milli])
+        swapped = @redis.evalsha(@cas_sha, keys: [full_key], argv: [old_value, new_value, ttl_milli])
       rescue Redis::CommandError => e
         if e.message == CAS_SCRIPT_MISSING_KEY_RESPONSE
           return false
         elsif e.message == SCRIPT_NOT_IN_CACHE_RESPOSNE && !retried
-          # unset memoized sha so it can be recomputed
-          @cas_sha = nil
+          @redis.script('load', CAS_SCRIPT)
           retried = true
           retry
         end
@@ -69,10 +71,6 @@ module GCRA
     end
 
     private
-
-    def cas_sha
-      @cas_sha ||= @redis.script('load', CAS_SCRIPT)
-    end
 
     def calculate_ttl_milli(ttl_nano)
       ttl_milli = ttl_nano / 1_000_000
