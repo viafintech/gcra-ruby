@@ -37,17 +37,11 @@ module GCRA
     end
 
     # Set the value of key only if it is not already set. Return whether the value was set.
-    # Also set the key's expiration (ttl, in seconds). The operations are not performed atomically.
+    # Also set the key's expiration (ttl, in seconds).
     def set_if_not_exists_with_ttl(key, value, ttl_nano)
       full_key = @key_prefix + key
-      did_set = @redis.setnx(full_key, value)
-
-      if did_set
-        ttl_milli = calculate_ttl_milli(ttl_nano)
-        @redis.pexpire(full_key, ttl_milli)
-      end
-
-      return did_set
+      ttl_milli = calculate_ttl_milli(ttl_nano)
+      @redis.set(full_key, value, nx: true, px: ttl_milli)
     end
 
     # Atomically compare the value at key to the old value. If it matches, set it to the new value
