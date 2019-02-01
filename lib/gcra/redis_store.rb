@@ -13,6 +13,7 @@ module GCRA
   return 1
   EOF
     CAS_SCRIPT_MISSING_KEY_RESPONSE = 'key does not exist'.freeze
+    SCRIPT_NOT_IN_CACHE_RESPOSNE = 'NOSCRIPT No matching script. Please use EVAL.'
 
     def initialize(redis, key_prefix)
       @redis = redis
@@ -52,12 +53,18 @@ module GCRA
     # return false with no error. If the swap succeeds, update the ttl for the key atomically.
     def compare_and_set_with_ttl(key, old_value, new_value, ttl_nano)
       full_key = @key_prefix + key
+      retried = false
       begin
         ttl_milli = calculate_ttl_milli(ttl_nano)
-        swapped = @redis.eval(CAS_SCRIPT, keys: [full_key], argv: [old_value, new_value, ttl_milli])
+        swapped = @redis.evalsha(cas_sha, keys: [full_key], argv: [old_value, new_value, ttl_milli])
       rescue Redis::CommandError => e
         if e.message == CAS_SCRIPT_MISSING_KEY_RESPONSE
           return false
+        elsif e.message == SCRIPT_NOT_IN_CACHE_RESPOSNE && !retried
+          # unset memoized sha so it can be recomputed
+          @cas_sha = nil
+          retried = true
+          retry
         end
         raise
       end
@@ -66,6 +73,10 @@ module GCRA
     end
 
     private
+
+    def cas_sha
+      @cas_sha ||= @redis.script('load', CAS_SCRIPT)
+    end
 
     def calculate_ttl_milli(ttl_nano)
       ttl_milli = ttl_nano / 1_000_000

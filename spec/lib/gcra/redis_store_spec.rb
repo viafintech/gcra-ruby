@@ -123,6 +123,31 @@ RSpec.describe GCRA::RedisStore do
       expect(swapped).to eq(true)
       expect(redis.ttl('gcra-ruby-specs:foo')).to be <= 1
     end
+
+    it 'handles the script cache being purged (gracefully reloads script)' do
+      redis.set('gcra-ruby-specs:foo', 2_000_000_000_000_000_000)
+
+      swapped = store.compare_and_set_with_ttl(
+        'foo', 2_000_000_000_000_000_000, 3_000_000_000_000_000_000, 10 * 1_000_000_000
+      )
+
+      expect(swapped).to eq(true)
+      expect(redis.get('gcra-ruby-specs:foo')).to eq('3000000000000000000')
+      expect(redis.ttl('gcra-ruby-specs:foo')).to be > 8
+      expect(redis.ttl('gcra-ruby-specs:foo')).to be <= 10
+
+      # purge the script cache, this will trigger an exception branch that reloads the script
+      redis.script('flush')
+
+      swapped = store.compare_and_set_with_ttl(
+        'foo', 3_000_000_000_000_000_000, 4_000_000_000_000_000_000, 10 * 1_000_000_000
+      )
+
+      expect(swapped).to eq(true)
+      expect(redis.get('gcra-ruby-specs:foo')).to eq('4000000000000000000')
+      expect(redis.ttl('gcra-ruby-specs:foo')).to be > 8
+      expect(redis.ttl('gcra-ruby-specs:foo')).to be <= 10
+    end
   end
 
   context 'functional test with RateLimiter' do
