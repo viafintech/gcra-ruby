@@ -170,6 +170,41 @@ describe GCRA do
     )
   end
 
+  describe 'mark_overflowed' do
+    it 'marks a key with previous data as being out of quota' do
+      limit = 5
+      rate_period = 1.0 # per second
+      store = TestStore.new
+      limiter = GCRA::RateLimiter.new(store, rate_period, limit)
+      limited, info = limiter.limit('foo', 1)
+      expect(limited).to eq(false)
+      expect(info.remaining).to eq(limit)
+
+      limiter.mark_overflowed('foo')
+
+      limited, info = limiter.limit('foo', 1)
+
+      expect(limited).to eq(true)
+      expect(info.remaining).to eq(0)
+      expect(info.retry_after).to eq(rate_period) # try again after the full rate period has elapsed
+    end
+
+    it 'marks a key with no previous data as being out of quota' do
+      limit = 5
+      rate_period = 1.0 # per second
+      store = TestStore.new
+      limiter = GCRA::RateLimiter.new(store, rate_period, limit)
+
+      limiter.mark_overflowed('foo')
+
+      limited, info = limiter.limit('foo', 1)
+
+      expect(limited).to eq(true)
+      expect(info.remaining).to eq(0)
+      expect(info.retry_after).to eq(rate_period) # try again after the full rate period has elapsed
+    end
+  end
+
   class TestStore
     attr_accessor :now
     attr_accessor :fail_sets
