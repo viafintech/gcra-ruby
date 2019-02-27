@@ -6,7 +6,7 @@
 
 ## Getting Started
 
-gcra currently uses Redis (>= 2.6 for EVAL, PEXPIRE, and PSETEX) as a data store, although it supports other store implementations.
+gcra currently uses Redis (>= 2.6.12 for EVALSHA, SCRIPT LOAD, SEX with NX and PX) as a data store, although it supports other store implementations.
 
 Add to your `Gemfile`:
 
