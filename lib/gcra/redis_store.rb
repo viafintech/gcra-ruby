@@ -15,7 +15,7 @@ module GCRA
   return 1
   EOF
     CAS_SCRIPT_MISSING_KEY_RESPONSE = 'key does not exist'.freeze
-    SCRIPT_NOT_IN_CACHE_RESPOSNE = 'NOSCRIPT No matching script. Please use EVAL.'
+    SCRIPT_NOT_IN_CACHE_RESPONSE = 'NOSCRIPT No matching script. Please use EVAL.'
 
     def initialize(redis, key_prefix)
       @redis = redis
@@ -59,7 +59,7 @@ module GCRA
       rescue Redis::CommandError => e
         if e.message == CAS_SCRIPT_MISSING_KEY_RESPONSE
           return false
-        elsif e.message == SCRIPT_NOT_IN_CACHE_RESPOSNE && !retried
+        elsif e.message == SCRIPT_NOT_IN_CACHE_RESPONSE && !retried
           @redis.script('load', CAS_SCRIPT)
           retried = true
           retry
