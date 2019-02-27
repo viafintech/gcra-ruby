@@ -1,5 +1,6 @@
 require 'spec_helper'
 require 'redis'
+require 'digest/sha1'
 require_relative '../../../lib/gcra/rate_limiter'
 require_relative '../../../lib/gcra/redis_store'
 
@@ -28,6 +29,13 @@ RSpec.describe GCRA::RedisStore do
 
   after do
     cleanup_redis
+  end
+
+  specify "canary: CAS_SHA is up to date" do
+    actual_sha = Digest::SHA1.hexdigest(GCRA::RedisStore::CAS_SCRIPT)
+    stored_sha = GCRA::RedisStore::CAS_SHA
+    expect(actual_sha).to eq(stored_sha),
+      "CAS_SCRIPT was updated without adjusting CAS_SHA! Please change CAS_SHA to '#{stored_sha}'"
   end
 
   describe '#get_with_time' do

@@ -1,5 +1,3 @@
-require 'digest/sha1'
-
 module GCRA
   # Redis store, expects all timestamps and durations to be integers with nanoseconds since epoch.
   class RedisStore
@@ -14,13 +12,15 @@ module GCRA
   redis.call('psetex', KEYS[1], ARGV[3], ARGV[2])
   return 1
   EOF
+
+    # Digest::SHA1.hexdigest(CAS_SCRIPT)
+    CAS_SHA = "89118e702230c0d65969c5fc557a6e942a2f4d31".freeze
     CAS_SCRIPT_MISSING_KEY_RESPONSE = 'key does not exist'.freeze
     SCRIPT_NOT_IN_CACHE_RESPONSE = 'NOSCRIPT No matching script. Please use EVAL.'
 
     def initialize(redis, key_prefix)
       @redis = redis
       @key_prefix = key_prefix
-      @cas_sha = Digest::SHA1.hexdigest(CAS_SCRIPT)
     end
 
     # Returns the value of the key or nil, if it isn't in the store.
@@ -55,7 +55,7 @@ module GCRA
       retried = false
       begin
         ttl_milli = calculate_ttl_milli(ttl_nano)
-        swapped = @redis.evalsha(@cas_sha, keys: [full_key], argv: [old_value, new_value, ttl_milli])
+        swapped = @redis.evalsha(CAS_SHA, keys: [full_key], argv: [old_value, new_value, ttl_milli])
       rescue Redis::CommandError => e
         if e.message == CAS_SCRIPT_MISSING_KEY_RESPONSE
           return false
