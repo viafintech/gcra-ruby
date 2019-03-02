@@ -97,5 +97,30 @@ module GCRA
         "Failed to store updated rate limit data for key '#{key}' after #{MAX_ATTEMPTS} attempts"
       )
     end
+
+    # Overwrite the stored value for key to that of a bucket that has
+    # just overflowed, ignoring any existing stored data.
+    def mark_overflowed(key)
+      key = key.to_s unless key.is_a?(String)
+      i = 0
+      while i < MAX_ATTEMPTS
+        tat_from_store, now = @store.get_with_time(key)
+        new_value = now + @delay_variation_tolerance
+        ttl = @delay_variation_tolerance
+        updated = if tat_from_store.nil?
+                    @store.set_if_not_exists_with_ttl(key, new_value, ttl)
+                  else
+                    @store.compare_and_set_with_ttl(key, tat_from_store, new_value, ttl)
+                  end
+        if updated
+          return true
+        end
+        i += 1
+      end
+
+      raise StoreUpdateFailed.new(
+        "Failed to store updated rate limit data for key '#{key}' after #{MAX_ATTEMPTS} attempts"
+      )
+    end
   end
 end
