@@ -3,18 +3,16 @@ module GCRA
   class RedisStore
     CAS_SCRIPT = <<-EOF.freeze
   local v = redis.call('get', KEYS[1])
-  if v == false then
-    return redis.error_reply("key does not exist")
+  if v == false or v == ARGV[1] then
+    redis.call('psetex', KEYS[1], ARGV[3], ARGV[2])
+    return 1
   end
-  if v ~= ARGV[1] then
-    return 0
-  end
-  redis.call('psetex', KEYS[1], ARGV[3], ARGV[2])
-  return 1
+
+  return 0
   EOF
 
     # Digest::SHA1.hexdigest(CAS_SCRIPT)
-    CAS_SHA = "89118e702230c0d65969c5fc557a6e942a2f4d31".freeze
+    CAS_SHA = "bdf3853995b32d121a101ddd02e672ca32cda226".freeze
     CAS_SCRIPT_MISSING_KEY_RESPONSE = 'key does not exist'.freeze
     SCRIPT_NOT_IN_CACHE_RESPONSE = 'NOSCRIPT No matching script. Please use EVAL.'
 
@@ -49,7 +47,8 @@ module GCRA
 
     # Atomically compare the value at key to the old value. If it matches, set it to the new value
     # and return true. Otherwise, return false. If the key does not exist in the store,
-    # return false with no error. If the swap succeeds, update the ttl for the key atomically.
+    # it is inserted similar to the `set_if_not_exists_with_ttl` method. If the swap succeeds,
+    # update the ttl for the key atomically.
     def compare_and_set_with_ttl(key, old_value, new_value, ttl_nano)
       full_key = @key_prefix + key
       retried = false

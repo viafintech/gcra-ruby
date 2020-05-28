@@ -35,7 +35,7 @@ RSpec.describe GCRA::RedisStore do
     actual_sha = Digest::SHA1.hexdigest(GCRA::RedisStore::CAS_SCRIPT)
     stored_sha = GCRA::RedisStore::CAS_SHA
     expect(actual_sha).to eq(stored_sha),
-      "CAS_SCRIPT was updated without adjusting CAS_SHA! Please change CAS_SHA to '#{stored_sha}'"
+      "CAS_SCRIPT was updated without adjusting CAS_SHA! Please change CAS_SHA to '#{actual_sha}'"
   end
 
   describe '#get_with_time' do
@@ -88,13 +88,14 @@ RSpec.describe GCRA::RedisStore do
   end
 
   describe '#compare_and_set_with_ttl' do
-    it 'with no existing key, returns false' do
+    it 'with no existing key, returns true' do
       swapped = store.compare_and_set_with_ttl(
         'foo', 2_000_000_000_000_000_000, 3_000_000_000_000_000_000, 1 * 1_000_000_000
       )
 
-      expect(swapped).to eq(false)
-      expect(redis.get('gcra-ruby-specs:foo')).to be_nil
+      expect(swapped).to eq(true)
+      expect(redis.get('gcra-ruby-specs:foo')).to eq('3000000000000000000')
+      expect(redis.ttl('gcra-ruby-specs:foo')).to eq(1)
     end
 
     it 'with an existing key and not matching old value, returns false' do
