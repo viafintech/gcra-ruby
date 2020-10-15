@@ -24,7 +24,11 @@ require 'gcra/redis_store'
 
 redis = Redis.new(host: 'localhost', port: 6379, timeout: 0.1)
 key_prefix = 'rate-limit-app1:'
-store = GCRA::RedisStore.new(redis, key_prefix)
+store = GCRA::RedisStore.new(
+          redis,
+          key_prefix,
+          { reconnect_on_readonly: false },
+        )
 
 rate_period = 0.5  # Two requests per second
 max_burst = 10     # Allow 10 additional requests as a burst

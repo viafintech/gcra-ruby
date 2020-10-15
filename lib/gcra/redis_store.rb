@@ -16,11 +16,15 @@ module GCRA
     # Digest::SHA1.hexdigest(CAS_SCRIPT)
     CAS_SHA = "89118e702230c0d65969c5fc557a6e942a2f4d31".freeze
     CAS_SCRIPT_MISSING_KEY_RESPONSE = 'key does not exist'.freeze
-    SCRIPT_NOT_IN_CACHE_RESPONSE = 'NOSCRIPT No matching script. Please use EVAL.'
+    SCRIPT_NOT_IN_CACHE_RESPONSE = 'NOSCRIPT No matching script. Please use EVAL.'.freeze
 
-    def initialize(redis, key_prefix)
+    CONNECTED_TO_READONLY = "READONLY You can't write against a read only slave.".freeze
+
+    def initialize(redis, key_prefix, options = {})
       @redis = redis
       @key_prefix = key_prefix
+
+      @reconnect_on_readonly = options[:reconnect_on_readonly] || false
     end
 
     # Returns the value of the key or nil, if it isn't in the store.
@@ -43,8 +47,18 @@ module GCRA
     # Also set the key's expiration (ttl, in seconds).
     def set_if_not_exists_with_ttl(key, value, ttl_nano)
       full_key = @key_prefix + key
-      ttl_milli = calculate_ttl_milli(ttl_nano)
-      @redis.set(full_key, value, nx: true, px: ttl_milli)
+      retried = false
+      begin
+        ttl_milli = calculate_ttl_milli(ttl_nano)
+        @redis.set(full_key, value, nx: true, px: ttl_milli)
+      rescue Redis::CommandError => e
+        if e.message == CONNECTED_TO_READONLY && @reconnect_on_readonly && !retried
+          @redis.client.reconnect
+          retried = true
+          retry
+        end
+        raise
+      end
     end
 
     # Atomically compare the value at key to the old value. If it matches, set it to the new value
@@ -61,6 +75,10 @@ module GCRA
           return false
         elsif e.message == SCRIPT_NOT_IN_CACHE_RESPONSE && !retried
           @redis.script('load', CAS_SCRIPT)
+          retried = true
+          retry
+        elsif e.message == CONNECTED_TO_READONLY && @reconnect_on_readonly && !retried
+          @redis.client.reconnect
           retried = true
           retry
         end

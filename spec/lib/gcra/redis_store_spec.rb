@@ -8,7 +8,8 @@ RSpec.describe GCRA::RedisStore do
   # Needs redis running on localhost:6379 (default port)
   let(:redis)      { Redis.new }
   let(:key_prefix) { 'gcra-ruby-specs:' }
-  let(:store)      { described_class.new(redis, key_prefix) }
+  let(:options)    { {} }
+  let(:store)      { described_class.new(redis, key_prefix, options) }
 
   def cleanup_redis
     keys = redis.keys("#{key_prefix}*")
@@ -65,6 +66,47 @@ RSpec.describe GCRA::RedisStore do
       did_set = store.set_if_not_exists_with_ttl('foo', 2_000_000_000_000_000_000, 1)
 
       expect(did_set).to eq(false)
+    end
+
+    it 'with a readonly host and no readonly configured' do
+      exception = Redis::CommandError.new(GCRA::RedisStore::CONNECTED_TO_READONLY)
+
+      expect(redis)
+        .to receive(:set)
+              .with('gcra-ruby-specs:foo', 2_000_000_000_000_000_000, nx: true, px: 1)
+              .and_raise(exception)
+
+      expect do
+        store.set_if_not_exists_with_ttl('foo', 2_000_000_000_000_000_000, 1)
+      end.to raise_error(exception)
+    end
+
+    context 'with reconnect on readonly configured' do
+      let(:options) do
+        {
+          reconnect_on_readonly: true,
+        }
+      end
+
+      it 'with a readonly host' do
+        exception = Redis::CommandError.new(GCRA::RedisStore::CONNECTED_TO_READONLY)
+
+        expect(redis.client)
+          .to receive(:reconnect)
+                .and_call_original
+
+        expect(redis)
+          .to receive(:set)
+                .with('gcra-ruby-specs:foo', 2_000_000_000_000_000_000, nx: true, px: 1)
+                .and_raise(exception)
+
+        expect(redis)
+          .to receive(:set)
+                .with('gcra-ruby-specs:foo', 2_000_000_000_000_000_000, nx: true, px: 1)
+                .and_call_original
+
+        store.set_if_not_exists_with_ttl('foo', 2_000_000_000_000_000_000, 1)
+      end
     end
 
     it 'with no existing key, returns true' do
@@ -156,6 +198,71 @@ RSpec.describe GCRA::RedisStore do
       expect(redis.ttl('gcra-ruby-specs:foo')).to be > 8
       expect(redis.ttl('gcra-ruby-specs:foo')).to be <= 10
     end
+
+    context 'with reconnect on readonly not configured' do
+      it 'raises an error when the request is executed against a readonly host' do
+        exception = Redis::CommandError.new(GCRA::RedisStore::CONNECTED_TO_READONLY)
+
+        expect(redis)
+          .to receive(:evalsha)
+                .with(
+                  GCRA::RedisStore::CAS_SHA,
+                  keys: ['gcra-ruby-specs:foo'],
+                  argv: [3000000000000000000, 4000000000000000000, 10000],
+                )
+                .and_raise(exception)
+
+        expect do
+          store.compare_and_set_with_ttl(
+            'foo',
+            3_000_000_000_000_000_000,
+            4_000_000_000_000_000_000,
+            10 * 1_000_000_000,
+          )
+        end.to raise_error(exception)
+      end
+    end
+
+    context 'with reconnect on readonly configured' do
+      let(:options) do
+        {
+          reconnect_on_readonly: true,
+        }
+      end
+
+      it 'attempts a reconnect once and then executes evalsha again' do
+        exception = Redis::CommandError.new(GCRA::RedisStore::CONNECTED_TO_READONLY)
+
+        expect(redis.client)
+          .to receive(:reconnect)
+                .and_call_original
+
+        expect(redis)
+          .to receive(:evalsha)
+                .with(
+                  GCRA::RedisStore::CAS_SHA,
+                  keys: ['gcra-ruby-specs:foo'],
+                  argv: [3000000000000000000, 4000000000000000000, 10000],
+                )
+                .and_raise(exception)
+
+        expect(redis)
+          .to receive(:evalsha)
+                .with(
+                  GCRA::RedisStore::CAS_SHA,
+                  keys: ['gcra-ruby-specs:foo'],
+                  argv: [3000000000000000000, 4000000000000000000, 10000],
+                )
+
+        store.compare_and_set_with_ttl(
+          'foo',
+          3_000_000_000_000_000_000,
+          4_000_000_000_000_000_000,
+          10 * 1_000_000_000,
+        )
+      end
+    end
+
   end
 
   context 'functional test with RateLimiter' do
