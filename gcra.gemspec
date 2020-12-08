@@ -6,7 +6,7 @@ Gem::Specification.new do |spec|
   spec.name          = 'gcra'
   spec.version       = GCRA::VERSION
   spec.authors       = ['Michael Frister', 'Tobias Schoknecht']
-  spec.email         = ['tobias.schoknecht@barzahlen.de']
+  spec.email         = ['tobias.schoknecht@viafintech.com']
   spec.description   = 'GCRA implementation for rate limiting'
   spec.summary       = 'Ruby implementation of a generic cell rate algorithm (GCRA), ported from ' \
                        'the Go implementation throttled.'
