@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.description   = 'GCRA implementation for rate limiting'
   spec.summary       = 'Ruby implementation of a generic cell rate algorithm (GCRA), ported from ' \
                        'the Go implementation throttled.'
-  spec.homepage      = 'https://github.com/Barzahlen/gcra-ruby'
+  spec.homepage      = 'https://github.com/viafintech/gcra-ruby'
   spec.license       = 'MIT'
 
   spec.files         = Dir['lib/**/*.rb']
