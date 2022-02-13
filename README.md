@@ -1,6 +1,6 @@
 # GCRA for Ruby
 
-[![Build Status](https://travis-ci.org/Barzahlen/gcra-ruby.svg?branch=master)](https://travis-ci.org/Barzahlen/gcra-ruby) [![Code Climate](https://codeclimate.com/github/Barzahlen/gcra-ruby/badges/gpa.svg)](https://codeclimate.com/github/Barzahlen/gcra-ruby) [![RubyDoc](https://img.shields.io/badge/ruby-doc-green.svg)](http://rubydoc.info/github/Barzahlen/gcra-ruby)
+![Build Status](https://github.com/viafintech/gcra-ruby/actions/workflows/test.yml/badge.svg) [![Code Climate](https://codeclimate.com/github/Barzahlen/gcra-ruby/badges/gpa.svg)](https://codeclimate.com/github/Barzahlen/gcra-ruby) [![RubyDoc](https://img.shields.io/badge/ruby-doc-green.svg)](http://rubydoc.info/github/Barzahlen/gcra-ruby)
 
 `gcra` is a Ruby implementation of a [generic cell rate algorithm](https://en.wikipedia.org/wiki/Generic_cell_rate_algorithm) (GCRA), ported from and data-format compatible with the Go implementation [throttled](https://github.com/throttled/throttled). It's useful for rate limiting (e.g. for HTTP requests) and allows weights specified per request.
 
