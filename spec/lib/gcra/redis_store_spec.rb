@@ -69,7 +69,7 @@ RSpec.describe GCRA::RedisStore do
     end
 
     it 'with a readonly host and no readonly configured' do
-      exception = Redis::CommandError.new(GCRA::RedisStore::CONNECTED_TO_READONLY)
+      exception = Redis::ReadOnlyError.new
 
       expect(redis)
         .to receive(:set)
@@ -89,10 +89,10 @@ RSpec.describe GCRA::RedisStore do
       end
 
       it 'with a readonly host' do
-        exception = Redis::CommandError.new(GCRA::RedisStore::CONNECTED_TO_READONLY)
+        exception = Redis::ReadOnlyError.new
 
-        expect(redis.client)
-          .to receive(:reconnect)
+        expect(redis)
+          .to receive(:close)
                 .and_call_original
 
         expect(redis)
@@ -201,7 +201,7 @@ RSpec.describe GCRA::RedisStore do
 
     context 'with reconnect on readonly not configured' do
       it 'raises an error when the request is executed against a readonly host' do
-        exception = Redis::CommandError.new(GCRA::RedisStore::CONNECTED_TO_READONLY)
+        exception = Redis::ReadOnlyError.new
 
         expect(redis)
           .to receive(:evalsha)
@@ -231,10 +231,10 @@ RSpec.describe GCRA::RedisStore do
       end
 
       it 'attempts a reconnect once and then executes evalsha again' do
-        exception = Redis::CommandError.new(GCRA::RedisStore::CONNECTED_TO_READONLY)
+        exception = Redis::ReadOnlyError.new
 
-        expect(redis.client)
-          .to receive(:reconnect)
+        expect(redis)
+          .to receive(:close)
                 .and_call_original
 
         expect(redis)
