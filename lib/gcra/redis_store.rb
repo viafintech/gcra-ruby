@@ -18,8 +18,6 @@ module GCRA
     CAS_SCRIPT_MISSING_KEY_RESPONSE = 'key does not exist'.freeze
     SCRIPT_NOT_IN_CACHE_RESPONSE = 'NOSCRIPT No matching script. Please use EVAL.'.freeze
 
-    CONNECTED_TO_READONLY = "READONLY You can't write against a read only slave.".freeze
-
     def initialize(redis, key_prefix, options = {})
       @redis = redis
       @key_prefix = key_prefix
@@ -51,9 +49,9 @@ module GCRA
       begin
         ttl_milli = calculate_ttl_milli(ttl_nano)
         @redis.set(full_key, value, nx: true, px: ttl_milli)
-      rescue Redis::CommandError => e
-        if e.message == CONNECTED_TO_READONLY && @reconnect_on_readonly && !retried
-          @redis.client.reconnect
+      rescue Redis::ReadOnlyError => e
+        if @reconnect_on_readonly && !retried
+          @redis.close
           retried = true
           retry
         end
@@ -70,15 +68,18 @@ module GCRA
       begin
         ttl_milli = calculate_ttl_milli(ttl_nano)
         swapped = @redis.evalsha(CAS_SHA, keys: [full_key], argv: [old_value, new_value, ttl_milli])
+      rescue Redis::ReadOnlyError => e
+        if @reconnect_on_readonly && !retried
+          @redis.close
+          retried = true
+          retry
+        end
+        raise
       rescue Redis::CommandError => e
         if e.message == CAS_SCRIPT_MISSING_KEY_RESPONSE
           return false
         elsif e.message == SCRIPT_NOT_IN_CACHE_RESPONSE && !retried
           @redis.script('load', CAS_SCRIPT)
-          retried = true
-          retry
-        elsif e.message == CONNECTED_TO_READONLY && @reconnect_on_readonly && !retried
-          @redis.client.reconnect
           retried = true
           retry
         end
