@@ -15,8 +15,10 @@ module GCRA
 
     # Digest::SHA1.hexdigest(CAS_SCRIPT)
     CAS_SHA = "89118e702230c0d65969c5fc557a6e942a2f4d31".freeze
-    CAS_SCRIPT_MISSING_KEY_RESPONSE = 'key does not exist'.freeze
-    SCRIPT_NOT_IN_CACHE_RESPONSE = 'NOSCRIPT No matching script. Please use EVAL.'.freeze
+    CAS_SCRIPT_MISSING_KEY_RESPONSE_PATTERN = Regexp.new('^key does not exist')
+    SCRIPT_NOT_IN_CACHE_RESPONSE_PATTERN = Regexp.new(
+      '^NOSCRIPT No matching script. Please use EVAL.',
+    )
 
     def initialize(redis, key_prefix, options = {})
       @redis = redis
@@ -76,9 +78,9 @@ module GCRA
         end
         raise
       rescue Redis::CommandError => e
-        if e.message == CAS_SCRIPT_MISSING_KEY_RESPONSE
+        if e.message =~ CAS_SCRIPT_MISSING_KEY_RESPONSE_PATTERN
           return false
-        elsif e.message == SCRIPT_NOT_IN_CACHE_RESPONSE && !retried
+        elsif e.message =~ SCRIPT_NOT_IN_CACHE_RESPONSE_PATTERN && !retried
           @redis.script('load', CAS_SCRIPT)
           retried = true
           retry
