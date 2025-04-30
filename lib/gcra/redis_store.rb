@@ -17,7 +17,7 @@ module GCRA
     CAS_SHA = "89118e702230c0d65969c5fc557a6e942a2f4d31".freeze
     CAS_SCRIPT_MISSING_KEY_RESPONSE_PATTERN = Regexp.new('^key does not exist')
     SCRIPT_NOT_IN_CACHE_RESPONSE_PATTERN = Regexp.new(
-      '^NOSCRIPT No matching script. Please use EVAL.',
+      '^NOSCRIPT No matching script(?:\. Please use EVAL\.)?'
     )
 
     def initialize(redis, key_prefix, options = {})
