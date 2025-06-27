@@ -330,4 +330,21 @@ RSpec.describe GCRA::RedisStore do
       end
     end
   end
+
+  describe 'SCRIPT_NOT_IN_CACHE_RESPONSE_PATTERN' do
+    it 'matches Redis NOSCRIPT error' do
+      msg = 'NOSCRIPT No matching script. Please use EVAL.'
+      expect(GCRA::RedisStore::SCRIPT_NOT_IN_CACHE_RESPONSE_PATTERN).to match(msg)
+    end
+
+    it 'matches Valkey 8.0 NOSCRIPT error' do
+      msg = 'NOSCRIPT No matching script'
+      expect(GCRA::RedisStore::SCRIPT_NOT_IN_CACHE_RESPONSE_PATTERN).to match(msg)
+    end
+
+    it 'does not match unrelated error' do
+      msg = 'SOME OTHER ERROR'
+      expect(GCRA::RedisStore::SCRIPT_NOT_IN_CACHE_RESPONSE_PATTERN).not_to match(msg)
+    end
+  end
 end
